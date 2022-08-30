@@ -75,9 +75,14 @@ def add_client(name, last_name, email, phones=None):
     with conn.cursor() as cur:
         cur.execute("""
         INSERT INTO users (user_name, last_name, email) VALUES(%s, %s, %s);
-        INSERT INTO "number" (user_number) VALUES(%s); 
-        """, (name, last_name, email, phones))
+        """, (name, last_name, email))
         conn.commit()
+    if phones is not None:
+        with conn.cursor() as cur:
+            cur.execute("""       
+            INSERT INTO "number" (user_number) VALUES(%s); 
+            """, (phones,))
+            conn.commit()
         id_user = get_id_user(name, last_name)[0]
         id_number = get_id_number(phones)[0]
         with conn.cursor() as cur:
@@ -166,6 +171,7 @@ if __name__ == '__main__':
     print(get_id_user('Ivan', 'Ivanov'))
     print(get_id_number('123'))
     add_client('Alex', 'Alexandrov', 'A@mail.ru', '987')
+    add_client('Bob', 'Bobovich', 'B@mail.ru')
     add_number('Ivan', 'Ivanov', '753')
     change_user('1', user_name='Ivan2', last_name='ivanov2', email='@@', user_number=None)
     print(get_all_id_number('1'))
