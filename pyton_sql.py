@@ -172,7 +172,7 @@ def del_number(id_user):
             conn.commit()
             print('единственный номер удалён')
     else:
-        print('номер с каким ID удалить')
+        print('номер с каким ID удалить?')
         id_number = int(input (f'{id_numbers}: '))
         for id in id_numbers:
             if id_number == id[0]:
@@ -259,7 +259,8 @@ if __name__ == '__main__':
     add_number('Ivan', 'Ivanov', '753')
     # change_user(id_user='1', user_name='Ivan2', last_name='ivanov2', email='@@', user_number='999')
     # print(get_all_id_number('1'))
-    # del_number(id_user='1')
+    del_number(id_user='1')
+    print(get_all_id_number('1'))
     # del_user(id_user='1')
     print(find_id_user(user_name='Alex', last_name='Alexandrov', email='22@mail.ru', user_number='555'))
     conn.close()
