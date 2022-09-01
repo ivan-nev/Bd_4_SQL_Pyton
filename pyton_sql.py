@@ -1,4 +1,4 @@
-from ast import Not
+
 import psycopg2
 
 
@@ -146,12 +146,30 @@ def change_email(id_user, email):
         conn.commit()
 
 def change_user_number(id_user, user_number):
+    id_numbers = get_all_id_number(id_user)
+    if len(id_numbers) == 0:
+        print('У пользователя нет номеров')
+    elif len(id_numbers) == 1:
+        with conn.cursor() as cur:
+            cur.execute("""
+            UPDATE number SET user_number=%s WHERE id_number=%s;
+            """, (user_number, id_numbers[0][0]))
+            conn.commit()
+    else:
+        print('номер с каким ID заменить: ')
+        id_number = int(input (id_numbers))
+        for id in id_numbers:
+            if id_number == id[0]:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                    UPDATE number SET user_number=%s WHERE id_number=%s;
+                    """, (user_number, id_number))
+                    conn.commit()
+                    return
+    print('ID_number Error')
 
-    with conn.cursor() as cur:
-        cur.execute("""
-        UPDATE users SET email=%s WHERE id_user=%s;
-        """, (email, id_user))
-        conn.commit()
+
+
 
 def get_all_id_number(id_user):
     with conn.cursor() as cur:
@@ -162,6 +180,13 @@ def get_all_id_number(id_user):
         where un.id_user = %s
         """, (id_user))
         return cur.fetchall()
+
+def del_number(id_number):
+    with conn.cursor() as cur:
+        cur.execute("""
+           DELETE FROM number WHERE id_number=%s;
+           """, (id_number,))
+        conn.commit()
 
 
 if __name__ == '__main__':
@@ -175,5 +200,8 @@ if __name__ == '__main__':
     add_number('Ivan', 'Ivanov', '753')
     change_user('1', user_name='Ivan2', last_name='ivanov2', email='@@', user_number=None)
     print(get_all_id_number('1'))
+    del_number('1')
+    print(get_all_id_number('1'))
+    change_user_number('1', '111')
 
     conn.close()
