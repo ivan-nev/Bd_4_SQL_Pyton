@@ -194,6 +194,7 @@ def del_user(id_user):
         conn.commit()
 
 def find_id_user(user_name=None, last_name=None, email=None, user_number=None):
+    select_id = set()
     if user_name is not None:
         with conn.cursor() as cur:
             cur.execute("""
@@ -201,7 +202,12 @@ def find_id_user(user_name=None, last_name=None, email=None, user_number=None):
             from users
             where user_name = %s
             """, (user_name,))
-            print( cur.fetchall())
+            a = {i[0] for i in cur.fetchall()}
+            if len(select_id) != 0:
+                select_id = select_id & a
+            else:
+                select_id = a
+
     if last_name is not None:
         with conn.cursor() as cur:
             cur.execute("""
@@ -209,7 +215,12 @@ def find_id_user(user_name=None, last_name=None, email=None, user_number=None):
             from users
             where last_name = %s
             """, (last_name,))
-            print( cur.fetchall())
+            a = {i[0] for i in cur.fetchall()}
+            if len(select_id) != 0:
+                select_id = select_id & a
+            else:
+                select_id = a
+
     if email is not None:
         with conn.cursor() as cur:
             cur.execute("""
@@ -217,7 +228,11 @@ def find_id_user(user_name=None, last_name=None, email=None, user_number=None):
             from users
             where email = %s
             """, (email,))
-            print( cur.fetchall())
+            a = {i[0] for i in cur.fetchall()}
+            if len(select_id) != 0:
+                select_id = select_id & a
+            else:
+                select_id = a
     if user_number is not None:
         with conn.cursor() as cur:
             cur.execute("""
@@ -225,7 +240,12 @@ def find_id_user(user_name=None, last_name=None, email=None, user_number=None):
             from number
             where user_number = %s
             """, (user_number,))
-            print(cur.fetchall())
+            a = {i[0] for i in cur.fetchall()}
+            if len(select_id) != 0:
+                select_id = select_id & a
+            else:
+                select_id = a
+    return select_id
 
 
 
@@ -237,12 +257,9 @@ if __name__ == '__main__':
     add_client('Alex', 'Alexandrov', '22@mail.ru', '555')
     add_client('Bob', 'Bobovich', 'B@mail.ru')
     add_number('Ivan', 'Ivanov', '753')
-    change_user(id_user='1', user_name='Ivan2', last_name='ivanov2', email='@@', user_number='999')
-    print(get_all_id_number('1'))
-    del_number(id_user='1')
-    del_user(id_user='1')
-    find_id_user('Alex', 'Alexandrov', '22@mail.ru')
-
-
-
+    # change_user(id_user='1', user_name='Ivan2', last_name='ivanov2', email='@@', user_number='999')
+    # print(get_all_id_number('1'))
+    # del_number(id_user='1')
+    # del_user(id_user='1')
+    print(find_id_user(user_name='Alex', last_name='Alexandrov', email='22@mail.ru', user_number='555'))
     conn.close()
