@@ -6,9 +6,8 @@ def drop_db():
     with conn.cursor() as cur:
         cur.execute("""
         --sql
-        DROP TABLE user_number;
-        DROP TABLE users;
-        DROP TABLE number;
+       DROP TABLE number;
+       DROP TABLE users;
         """)
         conn.commit()
 
@@ -16,37 +15,30 @@ def drop_db():
 def create_db(conn):
     with conn.cursor() as cur:
         cur.execute("""
-        --sql       
-        CREATE TABLE IF NOT EXISTS "number" (
-	    id_number serial4 NOT NULL,
-	    user_number varchar NOT NULL,
-	    CONSTRAINT number_pk PRIMARY KEY (id_number)
-        );
-        --sql
-        CREATE TABLE IF NOT EXISTS "users" (
+        
+        CREATE TABLE IF NOT EXISTS users (
         id_user serial4 NOT NULL,
 	    user_name varchar NOT NULL,
 	    last_name varchar NOT NULL,
 	    email varchar NOT NULL,
-	    CONSTRAINT user_pk PRIMARY KEY (id_user)    
+	    CONSTRAINT user_pk PRIMARY KEY (id_user),
+	    CONSTRAINT user_un UNIQUE (email)    
         );
-        --sql        
         
-        CREATE TABLE IF NOT EXISTS user_number (
+        CREATE TABLE IF NOT EXISTS number(       
+        id_number serial4 NOT NULL,
+        user_number int4 NOT NULL,
         id_user int4 NOT NULL,
-        id_number int4 NOT NULL,
-        CONSTRAINT user_number_pk PRIMARY KEY (id_user, id_number),
-        CONSTRAINT user_number_fk FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE,
-        CONSTRAINT user_number_fk_1 FOREIGN KEY (id_number) REFERENCES "number"(id_number) ON DELETE CASCADE
+        CONSTRAINT number_pk PRIMARY KEY (id_number),
+        CONSTRAINT number_un UNIQUE (user_number),
+        CONSTRAINT number_fk FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
         );
         INSERT INTO users (user_name, last_name, email) VALUES('Ivan', 'Ivanov', 'I@mail.ru');
         INSERT INTO users (user_name, last_name, email) VALUES('Petr', 'Petrov', 'P@mail.ru');
-        INSERT INTO "number" (user_number) VALUES('123');
-        INSERT INTO "number" (user_number) VALUES('456');
-        INSERT INTO "number" (user_number) VALUES('789');
-        INSERT INTO user_number (id_user, id_number) VALUES(1, 1);
-        INSERT INTO user_number (id_user, id_number) VALUES(1, 2);
-        INSERT INTO user_number (id_user, id_number) VALUES(2, 3);
+        INSERT INTO number (user_number, id_user) VALUES('123', '1'),('456', '1'),('789', '2');      
+        
+
+
         """)
         conn.commit()
 
@@ -74,22 +66,18 @@ def get_id_number(user_number):
 def add_client(name, last_name, email, phones=None):
     with conn.cursor() as cur:
         cur.execute("""
-        INSERT INTO users (user_name, last_name, email) VALUES(%s, %s, %s);
+        INSERT INTO users (user_name, last_name, email) VALUES(%s, %s, %s) RETURNING id_user;
         """, (name, last_name, email))
-        conn.commit()
+        id_user = cur.fetchone()[0]
+        # conn.commit()
     if phones is not None:
+        # id_user = get_id_user(name, last_name)
         with conn.cursor() as cur:
             cur.execute("""       
-            INSERT INTO "number" (user_number) VALUES(%s); 
-            """, (phones,))
+            INSERT INTO "number" (user_number, id_user) VALUES(%s ,%s); 
+            """, (phones, id_user))
             conn.commit()
-        id_user = get_id_user(name, last_name)[0]
-        id_number = get_id_number(phones)[0]
-        with conn.cursor() as cur:
-            cur.execute("""
-            INSERT INTO user_number (id_user, id_number) VALUES(%s, %s);
-                        """, (id_user, id_number))
-            conn.commit()
+
 
 
 def add_number(user_name, last_name, number):
@@ -97,14 +85,8 @@ def add_number(user_name, last_name, number):
     if id_user is not None:
         with conn.cursor() as cur:
             cur.execute("""
-            INSERT INTO "number" (user_number) VALUES(%s); 
-            """, (number,))
-            conn.commit()
-        id_number = get_id_number(number)
-        with conn.cursor() as cur:
-            cur.execute("""
-            INSERT INTO user_number (id_user, id_number) VALUES(%s, %s);
-            """, (id_user[0], id_number[0]))
+            INSERT INTO "number" (user_number, id_user) VALUES(%s, %s); 
+            """, (number, id_user))
             conn.commit()
         print('+')
     else:
@@ -156,8 +138,8 @@ def change_user_number(id_user, user_number):
             """, (user_number, id_numbers[0][0]))
             conn.commit()
     else:
-        print('номер с каким ID заменить: ')
-        id_number = int(input (id_numbers))
+        print('номер с каким ID заменить')
+        id_number = int(input (f'{id_numbers}: '))
         for id in id_numbers:
             if id_number == id[0]:
                 with conn.cursor() as cur:
@@ -166,9 +148,7 @@ def change_user_number(id_user, user_number):
                     """, (user_number, id_number))
                     conn.commit()
                     return
-    print('ID_number Error')
-
-
+        print('ID_number Error')
 
 
 def get_all_id_number(id_user):
@@ -176,32 +156,93 @@ def get_all_id_number(id_user):
         cur.execute("""
         select n.id_number , n.user_number
         from number n
-        left join user_number un on n.id_number = un.id_number
-        where un.id_user = %s
+        where n.id_user = %s
         """, (id_user))
         return cur.fetchall()
 
-def del_number(id_number):
+def del_number(id_user):
+    id_numbers = get_all_id_number(id_user)
+    if len(id_numbers) == 0:
+        print('У пользователя нет номеров')
+    elif len(id_numbers) == 1:
+        with conn.cursor() as cur:
+            cur.execute("""
+            DELETE FROM number WHERE id_user=%s;
+            """, (id_user,))
+            conn.commit()
+            print('единственный номер удалён')
+    else:
+        print('номер с каким ID удалить')
+        id_number = int(input (f'{id_numbers}: '))
+        for id in id_numbers:
+            if id_number == id[0]:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                    DELETE FROM number WHERE id_number=%s;
+                    """, (id_number,))
+                    conn.commit()
+                    print('Номер удалён')
+                    return
+        print('ID_number Error')
+
+
+def del_user(id_user):
     with conn.cursor() as cur:
         cur.execute("""
-           DELETE FROM number WHERE id_number=%s;
-           """, (id_number,))
+        DELETE FROM users WHERE id_user=%s;
+        """, (id_user,))
         conn.commit()
+
+def find_id_user(user_name=None, last_name=None, email=None, user_number=None):
+    if user_name is not None:
+        with conn.cursor() as cur:
+            cur.execute("""
+            select id_user
+            from users
+            where user_name = %s
+            """, (user_name,))
+            print( cur.fetchall())
+    if last_name is not None:
+        with conn.cursor() as cur:
+            cur.execute("""
+            select id_user
+            from users
+            where last_name = %s
+            """, (last_name,))
+            print( cur.fetchall())
+    if email is not None:
+        with conn.cursor() as cur:
+            cur.execute("""
+            select id_user
+            from users
+            where email = %s
+            """, (email,))
+            print( cur.fetchall())
+    if user_number is not None:
+        with conn.cursor() as cur:
+            cur.execute("""
+            select id_user
+            from number
+            where user_number = %s
+            """, (user_number,))
+            print(cur.fetchall())
+
 
 
 if __name__ == '__main__':
     conn = psycopg2.connect(database='employee', user="postgres", password="1")
     drop_db()
     create_db(conn)
-    print(get_id_user('Ivan', 'Ivanov'))
-    print(get_id_number('123'))
     add_client('Alex', 'Alexandrov', 'A@mail.ru', '987')
+    add_client('Alex', 'Alexandrov', '22@mail.ru', '555')
     add_client('Bob', 'Bobovich', 'B@mail.ru')
     add_number('Ivan', 'Ivanov', '753')
-    change_user('1', user_name='Ivan2', last_name='ivanov2', email='@@', user_number=None)
+    change_user(id_user='1', user_name='Ivan2', last_name='ivanov2', email='@@', user_number='999')
     print(get_all_id_number('1'))
-    del_number('1')
-    print(get_all_id_number('1'))
-    change_user_number('1', '111')
+    del_number(id_user='1')
+    del_user(id_user='1')
+    find_id_user('Alex', 'Alexandrov', '22@mail.ru')
+
+
 
     conn.close()
